@@ -31,6 +31,7 @@ public class MessagingController {
     private static final String SUCCESS = "success";
     private static final String FAILURE = "failure";
     private static final String MESSAGE = "message";
+    private static final String TEXTS = "texts";
 
     @PostMapping("/user")
     public ResponseEntity<String> createUser(@RequestBody final UserRequest userRequest) {
@@ -87,6 +88,20 @@ public class MessagingController {
         }
     }
 
+    @GetMapping("/user/{username}/message/history")
+    public ResponseEntity<String> getChatHistory(@PathVariable final String username, @RequestParam final String friend) {
+        final List<Message> chatHistory = messageRepository
+                .findBySenderUsernameAndReceiverUsernameOrSenderUsernameAndReceiverUsernameOrderByCreatedAtAsc(
+                        username, friend, friend, username);
+        final JSONObject responseObject = getResponseObject(SUCCESS);
+        if (chatHistory.isEmpty()) {
+            responseObject.put(MESSAGE, "No chat history");
+        } else {
+            responseObject.put(TEXTS, formatChatHistoryResponse(chatHistory));
+        }
+        return ResponseEntity.ok(responseObject.toString());
+    }
+
     private String getFormattedResponseForFetchingUnreadMessages(final List<Message> unreadMessages) {
         final Map<String, List<String>> messagesBySender = new HashMap<>();
         for (final Message message : unreadMessages) {
@@ -111,6 +126,18 @@ public class MessagingController {
         jsonResponse.put("data", dataArray);
 
         return jsonResponse.toString();
+    }
+
+    private JSONArray formatChatHistoryResponse(final List<Message> chatHistory) {
+        final JSONArray textsArray = new JSONArray();
+
+        for (Message message : chatHistory) {
+            final JSONObject messageObject = new JSONObject();
+            messageObject.put(message.getSender().getUsername(), message.getText());
+            textsArray.put(messageObject);
+        }
+
+        return textsArray;
     }
 
     private JSONObject getResponseObject(final String status) {

@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByReceiverUsernameAndReadIsFalse(String receiverUsername);
+    List<Message> findBySenderUsernameAndReceiverUsernameOrSenderUsernameAndReceiverUsernameOrderByCreatedAtAsc(
+            String senderUsername, String receiverUsername, String senderUsername2, String receiverUsername2);
 }
