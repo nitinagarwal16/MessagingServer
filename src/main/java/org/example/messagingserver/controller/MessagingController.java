@@ -33,22 +33,26 @@ public class MessagingController {
     private static final String MESSAGE = "message";
 
     @PostMapping("/user")
-    public ResponseEntity<String> createUser(@RequestBody UserRequest userRequest) {
-        Optional<User> existingUser = userRepository.findByUsername(userRequest.getUsername());
+    public ResponseEntity<String> createUser(@RequestBody final UserRequest userRequest) {
+        final Optional<User> existingUser = userRepository.findByUsername(userRequest.getUsername());
         if (existingUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("{\"status\":\"failure\", \"message\":\"User already exists\"}");
+            final JSONObject responseObject = getResponseObject(FAILURE);
+            responseObject.put(MESSAGE, "User already exists");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseObject.toString());
         } else {
-            User user = new User(userRequest.getUsername(), userRequest.getPasscode());
+            final User user = new User(userRequest.getUsername(), userRequest.getPasscode());
             userRepository.save(user);
-            return ResponseEntity.ok("{\"status\":\"success\", \"message\":\"User created successfully\"}");
+            final JSONObject responseObject = getResponseObject(SUCCESS);
+            responseObject.put(MESSAGE, "User created successfully");
+            return ResponseEntity.ok(responseObject.toString());
         }
     }
 
     @GetMapping("/user")
     public ResponseEntity<List<String>> getUsers() {
-        List<User> users = userRepository.findAll();
-        List<String> usernames = new ArrayList<>();
-        for (User user : users) {
+        final List<User> users = userRepository.findAll();
+        final List<String> usernames = new ArrayList<>();
+        for (final User user : users) {
             usernames.add(user.getUsername());
         }
         return ResponseEntity.ok(usernames);
