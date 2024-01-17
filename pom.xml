@@ -49,6 +49,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- JSON Dependency -->
+
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20231013</version>
+        </dependency>
+
     </dependencies>
 
     <build>

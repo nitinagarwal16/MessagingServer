@@ -8,6 +8,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDateTime;
@@ -34,6 +35,8 @@ public class Message {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    @Setter
     private boolean read;
 
     public Message() {
