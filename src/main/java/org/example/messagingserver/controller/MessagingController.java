@@ -61,22 +61,30 @@ public class MessagingController {
 
     @PostMapping("/user/{fromUser}/message")
     public ResponseEntity<String> sendMessage(@PathVariable final String fromUser, @RequestBody final MessageRequest messageRequest) {
+        Optional<ResponseEntity<String>> userPresentAndLoggedInOptional = checkUserPresentAndLoggedIn(fromUser);
+        if(userPresentAndLoggedInOptional.isPresent()) {
+            return userPresentAndLoggedInOptional.get();
+        }
         final Optional<User> toUserOptional = userRepository.findByUsername(messageRequest.getTo());
         if (toUserOptional.isPresent()) {
             User toUser = toUserOptional.get();
-            User sender = userRepository.findByUsername(fromUser).orElseThrow();
+            User sender = userRepository.findByUsername(fromUser).get();
             Message message = new Message(sender, toUser, messageRequest.getText());
             messageRepository.save(message);
             return ResponseEntity.ok(getResponseObject(SUCCESS).toString());
         } else {
             final JSONObject responseObject = getResponseObject(FAILURE);
-            responseObject.put(MESSAGE, "User not found");
+            responseObject.put(MESSAGE, "Receiver not found");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(responseObject.toString());
         }
     }
 
     @GetMapping("/user/{username}/message")
     public ResponseEntity<String> getUnreadMessages(@PathVariable String username) {
+        Optional<ResponseEntity<String>> userPresentAndLoggedInOptional = checkUserPresentAndLoggedIn(username);
+        if(userPresentAndLoggedInOptional.isPresent()) {
+            return userPresentAndLoggedInOptional.get();
+        }
         final List<Message> unreadMessages = messageRepository.findByReceiverUsernameAndReadIsFalse(username);
 
         if (unreadMessages.isEmpty()) {
@@ -89,7 +97,12 @@ public class MessagingController {
     }
 
     @GetMapping("/user/{username}/message/history")
-    public ResponseEntity<String> getChatHistory(@PathVariable final String username, @RequestParam final String friend) {
+    public ResponseEntity<String> getChatHistory(@PathVariable final String username, @RequestParam final String friend,
+                                                 @RequestParam(required = false, defaultValue = "false") final boolean markAsRead) {
+        Optional<ResponseEntity<String>> userPresentAndLoggedInOptional = checkUserPresentAndLoggedIn(username);
+        if(userPresentAndLoggedInOptional.isPresent()) {
+            return userPresentAndLoggedInOptional.get();
+        }
         final List<Message> chatHistory = messageRepository
                 .findBySenderUsernameAndReceiverUsernameOrSenderUsernameAndReceiverUsernameOrderByCreatedAtAsc(
                         username, friend, friend, username);
@@ -97,9 +110,55 @@ public class MessagingController {
         if (chatHistory.isEmpty()) {
             responseObject.put(MESSAGE, "No chat history");
         } else {
+            if (markAsRead) {
+                markMessagesAsRead(chatHistory, username);
+            }
             responseObject.put(TEXTS, formatChatHistoryResponse(chatHistory));
         }
         return ResponseEntity.ok(responseObject.toString());
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> loginUser(@RequestBody final UserRequest userRequest) {
+        Optional<User> userOptional = userRepository.findByUsernameAndPasscode(userRequest.getUsername(), userRequest.getPasscode());
+        if (userOptional.isPresent()) {
+            final User user = userOptional.get();
+            user.setLoggedIn(true);
+            userRepository.save(user);
+            final JSONObject jsonResponse = getResponseObject(SUCCESS);
+            return ResponseEntity.ok(jsonResponse.toString());
+        } else {
+            final JSONObject jsonResponse = getResponseObject(FAILURE);
+            jsonResponse.put(MESSAGE, "Invalid username or passcode");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(jsonResponse.toString());
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logoutUser(@RequestBody final UserRequest userRequest) {
+        Optional<User> userOptional = userRepository.findByUsername(userRequest.getUsername());
+        if (userOptional.isPresent()) {
+            final User user = userOptional.get();
+            if(isUserLoggedIn(user.getUsername())) {
+                user.setLoggedIn(false);
+                userRepository.save(user);
+            }
+            final JSONObject jsonResponse = getResponseObject(SUCCESS);
+            return ResponseEntity.ok(jsonResponse.toString());
+        } else {
+            final JSONObject jsonResponse = getResponseObject(FAILURE);
+            jsonResponse.put(MESSAGE, "User not found");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(jsonResponse.toString());
+        }
+    }
+
+    private void markMessagesAsRead(final List<Message> messages, final String receiverUsername) {
+        for (final Message message : messages) {
+            if (!message.isRead() && message.getReceiver().getUsername().equals(receiverUsername)) {
+                message.setRead(true);
+                messageRepository.save(message);
+            }
+        }
     }
 
     private String getFormattedResponseForFetchingUnreadMessages(final List<Message> unreadMessages) {
@@ -139,6 +198,26 @@ public class MessagingController {
 
         return textsArray;
     }
+
+    private Optional<ResponseEntity<String>> checkUserPresentAndLoggedIn(final String username) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        final JSONObject responseObject = getResponseObject(FAILURE);
+        if(!userOptional.isPresent()) {
+            responseObject.put(MESSAGE, "User not found");
+            return Optional.of(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseObject.toString()));
+        } else if(!isUserLoggedIn(username)) {
+            responseObject.put(MESSAGE, "User not logged in");
+            return Optional.of(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(responseObject.toString()));
+        }
+        return Optional.empty();
+    }
+
+    private boolean isUserLoggedIn(final String username) {
+        final Optional<User> user = userRepository.findByUsername(username);
+        return user.get().isLoggedIn();
+    }
+
+
 
     private JSONObject getResponseObject(final String status) {
         final JSONObject jsonResponse = new JSONObject();

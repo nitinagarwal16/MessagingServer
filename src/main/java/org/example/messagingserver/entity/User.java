@@ -5,10 +5,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
-import lombok.Data;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 @Entity
 @Getter
@@ -25,6 +22,10 @@ public class User {
     @Column(nullable = false)
     private String passcode;
 
+    @Setter
+    @Column(nullable = false)
+    private boolean isLoggedIn;
+
     public User() {
 
     }
@@ -32,5 +33,6 @@ public class User {
     public User(final String username, final String passcode) {
         this.username = username;
         this.passcode = passcode;
+        this.isLoggedIn = false;
     }
 }
