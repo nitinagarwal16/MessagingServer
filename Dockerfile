@@ -1,4 +1,3 @@
-# Base image with Java 21
 FROM maven:3.8.7
 
 # Set working directory
