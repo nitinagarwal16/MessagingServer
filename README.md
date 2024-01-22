@@ -74,6 +74,15 @@ This is a simple peer-to-peer messaging server where users can register with uni
     # With markAsRead option
     curl --request GET 'http://localhost:8080/user/your-username/message/history?friend=friend-username&markAsRead=true'
     ```
+- **Block User:**
+    ```bash
+    curl --request POST 'http://localhost:8080/user/<your-username>/block' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{"username":"blocked-username"}'
+    ```
+
+- Note: When a user 'A' blocks a user 'B', neither of them will be able to send messages to each other
+
 
 - **Logout User:**
     ```bash

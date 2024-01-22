@@ -7,6 +7,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Getter
 @ToString
@@ -26,6 +29,9 @@ public class User {
     @Column(nullable = false)
     private boolean isLoggedIn;
 
+    @Column(nullable = false)
+    private Set<String> blockedUsers;
+
     public User() {
 
     }
@@ -34,5 +40,6 @@ public class User {
         this.username = username;
         this.passcode = passcode;
         this.isLoggedIn = false;
+        this.blockedUsers = new HashSet<>();
     }
 }

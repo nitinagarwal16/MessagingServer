@@ -69,6 +69,11 @@ public class MessagingController {
         if (toUserOptional.isPresent()) {
             User toUser = toUserOptional.get();
             User sender = userRepository.findByUsername(fromUser).get();
+            if(sender.getBlockedUsers().contains(toUser.getUsername())) { //Receiver is blocked
+                final JSONObject responseObject = getResponseObject(FAILURE);
+                responseObject.put(MESSAGE, "Receiver is blocked");
+                return ResponseEntity.ok(responseObject.toString());
+            }
             Message message = new Message(sender, toUser, messageRequest.getText());
             messageRepository.save(message);
             return ResponseEntity.ok(getResponseObject(SUCCESS).toString());
@@ -148,6 +153,29 @@ public class MessagingController {
         } else {
             final JSONObject jsonResponse = getResponseObject(FAILURE);
             jsonResponse.put(MESSAGE, "User not found");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(jsonResponse.toString());
+        }
+    }
+
+    @PostMapping("/user/{username}/block")
+    public ResponseEntity<String> blockUser(@PathVariable final String username, @RequestBody final UserRequest userRequest) {
+        Optional<ResponseEntity<String>> userPresentAndLoggedInOptional = checkUserPresentAndLoggedIn(username);
+        if(userPresentAndLoggedInOptional.isPresent()) {
+            return userPresentAndLoggedInOptional.get();
+        }
+        User user = userRepository.findByUsername(username).get();
+        Optional<User> blockedUserOptional = userRepository.findByUsername(userRequest.getUsername());
+        if(blockedUserOptional.isPresent()) {
+            final User blockedUser = blockedUserOptional.get();
+            user.getBlockedUsers().add(blockedUser.getUsername());//block user
+            userRepository.save(user);
+            blockedUser.getBlockedUsers().add(user.getUsername());
+            userRepository.save(blockedUser);
+            final JSONObject jsonResponse = getResponseObject(SUCCESS);
+            return ResponseEntity.ok(jsonResponse.toString());
+        } else {
+            final JSONObject jsonResponse = getResponseObject(FAILURE);
+            jsonResponse.put(MESSAGE, "User to be be blocked not found");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(jsonResponse.toString());
         }
     }
